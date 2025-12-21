@@ -8,196 +8,244 @@ let currentSpeed = 1.0;
 // DOM Elements
 const contentDisplayEl = document.getElementById('content-display');
 const chapterTitleDisplayEl = document.getElementById('chapter-title-display');
-const chapterSubtitleEl = document.getElementById('chapter-subtitle');
-const chapterSelectEl = document.getElementById('chapter-select');
 const prevChapterBtn = document.getElementById('prev-chapter-btn');
 const nextChapterBtn = document.getElementById('next-chapter-btn');
+const chapterIndicatorEl = document.getElementById('chapter-indicator');
 
-// Header & Navigation
-const headerBookSelectBtn = document.getElementById('header-book-select');
-const currentBookNameBtnText = document.getElementById('current-book-name-btn');
+// Sidebar
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const sidebar = document.getElementById('sidebar');
 const openSidebarBtn = document.getElementById('open-sidebar-btn');
-const closeSidebarBtn = document.getElementById('close-sidebar');
-const mobileSidebar = document.getElementById('mobile-sidebar');
-const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+const closeSidebarBtn = document.getElementById('close-sidebar-btn');
 const mobileBookListEl = document.getElementById('mobile-book-list');
-
-// Search
-const searchBtn = document.getElementById('search-btn');
-const searchBarContainer = document.getElementById('search-bar-container');
-const searchInput = document.getElementById('search-input');
-const searchResultsList = document.getElementById('search-results-list');
+const bookSearchInput = document.getElementById('book-search');
 
 // Theme
 const themeToggleBtn = document.getElementById('theme-toggle');
+const iconSun = document.getElementById('icon-sun');
+const iconMoon = document.getElementById('icon-moon');
 
 // Audio
-const playPauseBtn = document.getElementById('play-pause-btn');
-const playIcon = document.getElementById('play-icon');
-const pauseIcon = document.getElementById('pause-icon');
-const playerTitle = document.getElementById('player-title');
-const playerStatus = document.getElementById('player-status');
+const audioContainer = document.getElementById('audio-player-container');
+const audioToggleBtn = document.getElementById('audio-toggle-btn');
+const iconPlay = document.getElementById('icon-play');
+const iconPause = document.getElementById('icon-pause');
+const audioStatus = document.getElementById('audio-status');
 const audioProgress = document.getElementById('audio-progress');
 const speedBtn = document.getElementById('speed-btn');
-const speedDisplay = document.getElementById('speed-display');
+const audioSpeedDisplay = document.getElementById('audio-speed-display');
 
-// Font Size
-const fontSizeBtn = document.getElementById('font-size-btn');
-let currentFontSize = 18; // px
+// Loading
+const loadingOverlay = document.getElementById('loading-overlay');
 
 // Initialization
-function init() {
+document.addEventListener('DOMContentLoaded', () => {
+    // Check if bibleData is loaded
+    if (typeof bibleData === 'undefined') {
+        alert('Error: No se pudieron cargar los datos de la Biblia. Por favor recarga la página.');
+        if(loadingOverlay) loadingOverlay.innerHTML = '<p class="text-center text-red-500">Error de carga de datos.</p>';
+        return;
+    }
+
+    // Hide loading screen
+    setTimeout(() => {
+        if(loadingOverlay) loadingOverlay.classList.add('hidden');
+    }, 500);
+
+    // Initialize Theme
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.body.classList.add('dark');
+        updateThemeIcon(true);
+    } else {
+        document.body.classList.remove('dark');
+        updateThemeIcon(false);
+    }
+
+    // Initialize Data
     renderBookList();
     
-    // Load saved state if any (optional, skip for now)
-    loadChapter(currentBookIndex, currentChapterIndex);
-    
+    // Load last position or default (Genesis 1)
+    loadChapter(0, 0);
+
+    // Setup Listeners
     setupEventListeners();
-    
-    // Theme init
-    if (localStorage.getItem('theme') === 'light') {
-        document.documentElement.classList.remove('dark');
-        document.body.classList.remove('dark');
+});
+
+function setupEventListeners() {
+    // Navigation
+    prevChapterBtn.addEventListener('click', () => navigateChapter(-1));
+    nextChapterBtn.addEventListener('click', () => navigateChapter(1));
+
+    // Sidebar
+    openSidebarBtn.addEventListener('click', toggleSidebar);
+    closeSidebarBtn.addEventListener('click', toggleSidebar);
+    sidebarOverlay.addEventListener('click', toggleSidebar);
+
+    // Book Search
+    bookSearchInput.addEventListener('input', (e) => filterBooks(e.target.value));
+
+    // Theme
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        const isDark = document.body.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        updateThemeIcon(isDark);
+    });
+
+    // Audio
+    audioToggleBtn.addEventListener('click', toggleAudio);
+    speedBtn.addEventListener('click', cycleSpeed);
+}
+
+// Logic functions
+function toggleSidebar() {
+    sidebar.classList.toggle('open');
+    sidebarOverlay.classList.toggle('open');
+}
+
+function updateThemeIcon(isDark) {
+    if (isDark) {
+        iconMoon.classList.add('hidden');
+        iconSun.classList.remove('hidden');
+    } else {
+        iconMoon.classList.remove('hidden');
+        iconSun.classList.add('hidden');
     }
 }
 
-// Sidebar Logic
-function toggleSidebar() {
-    mobileSidebar.classList.toggle('open');
-    sidebarBackdrop.classList.toggle('open');
-}
-
-// Render Book List in Sidebar
 function renderBookList() {
     mobileBookListEl.innerHTML = '';
     
-    const testaments = { 'Antiguo': [], 'Nuevo': [] };
+    // We can group by Testament if we had that metadata in a flat way easily accessible, 
+    // but bibleData is array.
+    // bibleData struct: { name, testament, chapters: [] }
     
+    let currentTestament = '';
+
     bibleData.forEach((book, index) => {
-        if (testaments[book.testament]) {
-            testaments[book.testament].push({ ...book, index });
+        if (book.testament !== currentTestament) {
+            currentTestament = book.testament;
+            const header = document.createElement('div');
+            header.className = 'text-xs font-bold text-muted uppercase tracking-wider px-4 py-2 mt-2 sticky top-0 bg-surface';
+            header.style.backgroundColor = 'var(--bg-surface)'; // ensure sticky works visually
+            header.textContent = `${currentTestament} Testamento`;
+            mobileBookListEl.appendChild(header);
         }
+
+        const item = document.createElement('div');
+        item.className = 'book-item flex justify-between items-center';
+        item.dataset.index = index;
+        item.dataset.name = book.name.toLowerCase();
+        
+        item.innerHTML = `
+            <span class="font-medium text-main">${book.name}</span>
+            <span class="text-xs text-muted bg-surface-alt px-2 py-1 rounded-full">${book.chapters.length} cap</span>
+        `;
+        
+        item.onclick = () => {
+            loadChapter(index, 0);
+            toggleSidebar();
+        };
+        
+        mobileBookListEl.appendChild(item);
     });
-
-    for (const [testament, books] of Object.entries(testaments)) {
-        if (books.length === 0) continue;
-
-        const header = document.createElement('div');
-        header.className = 'px-4 py-2 bg-gray-100 dark:bg-surface-dark text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider sticky top-0';
-        header.textContent = `${testament} Testamento`;
-        mobileBookListEl.appendChild(header);
-
-        books.forEach(book => {
-            const item = document.createElement('div');
-            item.className = 'book-item';
-            if (book.index === currentBookIndex) item.classList.add('active');
-            
-            item.innerHTML = `
-                <span class="font-medium text-sm">${book.name}</span>
-                <span class="text-xs text-slate-500 dark:text-gray-400 bg-gray-100 dark:bg-white-10 px-2 py-0.5 rounded-full">${book.chapters.length}</span>
-            `;
-            
-            item.onclick = () => {
-                loadChapter(book.index, 0);
-                toggleSidebar();
-                updateActiveBookInList();
-            };
-            item.dataset.index = book.index;
-            mobileBookListEl.appendChild(item);
-        });
-    }
 }
 
-function updateActiveBookInList() {
+function filterBooks(query) {
+    query = query.toLowerCase();
     const items = mobileBookListEl.querySelectorAll('.book-item');
     items.forEach(item => {
-        if (parseInt(item.dataset.index) === currentBookIndex) {
-            item.classList.add('active');
+        const name = item.dataset.name;
+        if (name.includes(query)) {
+            item.classList.remove('hidden');
         } else {
-            item.classList.remove('active');
+            item.classList.add('hidden');
         }
     });
 }
 
-// Core: Load Chapter
 function loadChapter(bookIndex, chapterIndex) {
+    // Bounds check
+    if (bookIndex < 0 || bookIndex >= bibleData.length) return;
     const book = bibleData[bookIndex];
-    if (!book) return;
-
-    // Validate
+    
     if (chapterIndex < 0) chapterIndex = 0;
     if (chapterIndex >= book.chapters.length) chapterIndex = book.chapters.length - 1;
 
     currentBookIndex = bookIndex;
     currentChapterIndex = chapterIndex;
 
-    // Stop audio if playing
-    stopAudio();
-
-    // Update UI Texts
+    // Update State & UI
     chapterTitleDisplayEl.textContent = book.name;
-    chapterSubtitleEl.textContent = `Capítulo ${currentChapterIndex + 1}`;
-    currentBookNameBtnText.textContent = `${book.name} ${currentChapterIndex + 1}`;
-    playerTitle.textContent = `${book.name} ${currentChapterIndex + 1}`;
-    playerStatus.textContent = 'Audio';
-
-    // Populate Select
-    populateChapterSelect(book);
-    chapterSelectEl.value = currentChapterIndex;
-
-    // Render Text
-    const verses = book.chapters[chapterIndex];
-    contentDisplayEl.innerHTML = '';
+    chapterIndicatorEl.textContent = `Cap ${chapterIndex + 1}`;
     
-    // Scroll to top
-    window.scrollTo(0, 0);
-
-    if (!verses || verses.length === 0) {
-        contentDisplayEl.innerHTML = '<p class="text-center italic opacity-50">Texto no disponible.</p>';
-        return;
+    // Render Verses
+    contentDisplayEl.innerHTML = '';
+    const verses = book.chapters[chapterIndex];
+    
+    if (verses) {
+        verses.forEach((text, i) => {
+            const p = document.createElement('p');
+            p.className = 'verse';
+            
+            const num = document.createElement('span');
+            num.className = 'verse-num';
+            num.textContent = i + 1;
+            
+            p.appendChild(num);
+            p.appendChild(document.createTextNode(text));
+            contentDisplayEl.appendChild(p);
+        });
     }
 
-    verses.forEach((text, i) => {
-        const p = document.createElement('p');
-        // Check for "Jesus words" logic if we had metadata, but we don't.
-        // Just standard rendering.
-        
-        // Verse Number
-        const vNum = document.createElement('span');
-        vNum.className = 'verse-num';
-        vNum.textContent = i + 1;
-        
-        p.appendChild(vNum);
-        p.appendChild(document.createTextNode(text));
-        contentDisplayEl.appendChild(p);
+    // Update Sidebar Active State
+    document.querySelectorAll('.book-item').forEach(el => {
+        if (parseInt(el.dataset.index) === bookIndex) el.classList.add('active');
+        else el.classList.remove('active');
     });
+
+    // Reset Audio if playing a different chapter
+    if (isPlaying) stopAudio();
+    updateAudioUI();
+
+    // Scroll top
+    window.scrollTo(0, 0);
     
-    // Nav Buttons
-    updateNavButtons();
+    // Update button states
+    prevChapterBtn.disabled = (bookIndex === 0 && chapterIndex === 0);
+    nextChapterBtn.disabled = (bookIndex === bibleData.length - 1 && chapterIndex === book.chapters.length - 1);
 }
 
-function populateChapterSelect(book) {
-    chapterSelectEl.innerHTML = '';
-    book.chapters.forEach((_, i) => {
-        const opt = document.createElement('option');
-        opt.value = i;
-        opt.textContent = `Cap. ${i + 1}`;
-        chapterSelectEl.appendChild(opt);
-    });
+function navigateChapter(direction) {
+    let newBook = currentBookIndex;
+    let newChapter = currentChapterIndex + direction;
+
+    const currentBookData = bibleData[currentBookIndex];
+
+    if (newChapter < 0) {
+        // Go to previous book
+        if (newBook > 0) {
+            newBook--;
+            newChapter = bibleData[newBook].chapters.length - 1;
+        } else {
+            return; // Start of bible
+        }
+    } else if (newChapter >= currentBookData.chapters.length) {
+        // Go to next book
+        if (newBook < bibleData.length - 1) {
+            newBook++;
+            newChapter = 0;
+        } else {
+            return; // End of bible
+        }
+    }
+
+    loadChapter(newBook, newChapter);
 }
 
-function updateNavButtons() {
-    const book = bibleData[currentBookIndex];
-    prevChapterBtn.disabled = (currentBookIndex === 0 && currentChapterIndex === 0);
-    prevChapterBtn.style.opacity = prevChapterBtn.disabled ? '0.5' : '1';
-    
-    const isLast = (currentBookIndex === bibleData.length - 1 && currentChapterIndex === book.chapters.length - 1);
-    nextChapterBtn.disabled = isLast;
-    nextChapterBtn.style.opacity = isLast ? '0.5' : '1';
-}
-
-// Audio Logic (TTS)
-function togglePlay() {
+// Audio System
+function toggleAudio() {
     if (isPlaying) {
         pauseAudio();
     } else {
@@ -209,53 +257,47 @@ function playAudio() {
     if (window.speechSynthesis.paused && speechUtterance) {
         window.speechSynthesis.resume();
         isPlaying = true;
-        updatePlayerUI();
+        updateAudioUI();
         return;
     }
-
-    if (window.speechSynthesis.speaking) {
-        // Already speaking something else? Stop it.
-        window.speechSynthesis.cancel();
-    }
-
+    
+    // Start fresh
+    window.speechSynthesis.cancel();
+    
     const book = bibleData[currentBookIndex];
     const verses = book.chapters[currentChapterIndex];
-    // Construct text
-    const fullText = `${book.name}, Capítulo ${currentChapterIndex + 1}. ` + verses.join('. ');
-
-    speechUtterance = new SpeechSynthesisUtterance(fullText);
-    speechUtterance.lang = 'es-ES'; // Spanish
+    const text = `${book.name} Capítulo ${currentChapterIndex + 1}. ` + verses.join('. ');
+    
+    speechUtterance = new SpeechSynthesisUtterance(text);
+    speechUtterance.lang = 'es-ES';
     speechUtterance.rate = currentSpeed;
     
-    // Progress estimation
-    const totalLength = fullText.length;
-    
-    speechUtterance.onboundary = (event) => {
-        if (event.name === 'word' || event.name === 'sentence') {
-            const percentage = (event.charIndex / totalLength) * 100;
-            audioProgress.style.width = `${percentage}%`;
+    // Progress
+    const totalLen = text.length;
+    speechUtterance.onboundary = (e) => {
+        if (e.name === 'word') {
+            const pct = (e.charIndex / totalLen) * 100;
+            audioProgress.style.width = `${pct}%`;
         }
     };
     
     speechUtterance.onend = () => {
-        stopAudio();
+        isPlaying = false;
+        updateAudioUI();
+        audioProgress.style.width = '100%';
     };
     
-    speechUtterance.onerror = (e) => {
-        console.error('Speech error:', e);
-        stopAudio();
-    };
-
     window.speechSynthesis.speak(speechUtterance);
     isPlaying = true;
-    updatePlayerUI();
+    audioContainer.classList.remove('hidden');
+    updateAudioUI();
 }
 
 function pauseAudio() {
     if (window.speechSynthesis.speaking) {
         window.speechSynthesis.pause();
         isPlaying = false;
-        updatePlayerUI();
+        updateAudioUI();
     }
 }
 
@@ -264,143 +306,33 @@ function stopAudio() {
     isPlaying = false;
     speechUtterance = null;
     audioProgress.style.width = '0%';
-    updatePlayerUI();
+    updateAudioUI();
 }
 
-function updatePlayerUI() {
+function updateAudioUI() {
     if (isPlaying) {
-        playIcon.classList.add('hidden');
-        pauseIcon.classList.remove('hidden');
-        playerStatus.textContent = 'Reproduciendo...';
-        playerStatus.className = 'text-xs text-primary font-mono';
+        iconPlay.classList.add('hidden');
+        iconPause.classList.remove('hidden');
+        audioStatus.textContent = 'Reproduciendo...';
+        audioStatus.classList.add('text-primary');
     } else {
-        playIcon.classList.remove('hidden');
-        pauseIcon.classList.add('hidden');
-        playerStatus.textContent = 'Pausado / Audio';
-        playerStatus.className = 'text-xs text-gray-400 font-mono';
+        iconPlay.classList.remove('hidden');
+        iconPause.classList.add('hidden');
+        audioStatus.textContent = 'Audio Pausado';
+        audioStatus.classList.remove('text-primary');
     }
 }
 
-// Event Listeners Setup
-function setupEventListeners() {
-    // Nav
-    prevChapterBtn.addEventListener('click', () => {
-        if (currentChapterIndex > 0) {
-            loadChapter(currentBookIndex, currentChapterIndex - 1);
-        } else if (currentBookIndex > 0) {
-            const prevBook = bibleData[currentBookIndex - 1];
-            loadChapter(currentBookIndex - 1, prevBook.chapters.length - 1);
-        }
-    });
+function cycleSpeed() {
+    const speeds = [1.0, 1.25, 1.5, 2.0, 0.8];
+    let idx = speeds.indexOf(currentSpeed);
+    currentSpeed = speeds[(idx + 1) % speeds.length];
+    audioSpeedDisplay.textContent = `${currentSpeed}x`;
     
-    nextChapterBtn.addEventListener('click', () => {
-        const book = bibleData[currentBookIndex];
-        if (currentChapterIndex < book.chapters.length - 1) {
-            loadChapter(currentBookIndex, currentChapterIndex + 1);
-        } else if (currentBookIndex < bibleData.length - 1) {
-            loadChapter(currentBookIndex + 1, 0);
-        }
-    });
-    
-    // Selects
-    chapterSelectEl.addEventListener('change', (e) => {
-        loadChapter(currentBookIndex, parseInt(e.target.value));
-    });
-    
-    // Sidebar
-    openSidebarBtn.addEventListener('click', toggleSidebar);
-    headerBookSelectBtn.addEventListener('click', toggleSidebar);
-    closeSidebarBtn.addEventListener('click', toggleSidebar);
-    sidebarBackdrop.addEventListener('click', toggleSidebar);
-    
-    // Search
-    searchBtn.addEventListener('click', () => {
-        searchBarContainer.classList.toggle('hidden');
-        if (!searchBarContainer.classList.contains('hidden')) {
-            searchInput.focus();
-        }
-    });
-    
-    searchInput.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') performSearch(e.target.value);
-    });
-    
-    // Theme
-    themeToggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('dark');
-        document.documentElement.classList.toggle('dark');
-        const isDark = document.body.classList.contains('dark');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    });
-    
-    // Font Size
-    fontSizeBtn.addEventListener('click', () => {
-        currentFontSize += 2;
-        if (currentFontSize > 24) currentFontSize = 14;
-        contentDisplayEl.style.fontSize = `${currentFontSize}px`;
-    });
-    
-    // Audio
-    playPauseBtn.addEventListener('click', togglePlay);
-    
-    speedBtn.addEventListener('click', () => {
-        const speeds = [1.0, 1.25, 1.5, 2.0, 0.75];
-        let idx = speeds.indexOf(currentSpeed);
-        idx = (idx + 1) % speeds.length;
-        currentSpeed = speeds[idx];
-        speedDisplay.textContent = `${currentSpeed}x`;
-        
-        // If playing, restart with new speed
-        if (isPlaying) {
-            window.speechSynthesis.cancel();
-            playAudio();
-        }
-    });
-}
-
-function performSearch(query) {
-    if (!query || query.length < 2) return;
-    query = query.toLowerCase();
-    
-    searchResultsList.innerHTML = '';
-    searchResultsList.classList.remove('hidden');
-    
-    let count = 0;
-    const maxResults = 50;
-    
-    for (let b = 0; b < bibleData.length; b++) {
-        const book = bibleData[b];
-        for (let c = 0; c < book.chapters.length; c++) {
-            const chapter = book.chapters[c];
-            for (let v = 0; v < chapter.length; v++) {
-                const verse = chapter[v];
-                if (verse.toLowerCase().includes(query)) {
-                    count++;
-                    if (count > maxResults) break;
-                    
-                    const div = document.createElement('div');
-                    div.className = 'p-3 border-b border-gray-200 dark:border-white-10 cursor-pointer hover-bg-gray-200 dark:hover-bg-white-10 text-sm';
-                    div.innerHTML = `
-                        <div class="font-bold text-primary">${book.name} ${c+1}:${v+1}</div>
-                        <div class="text-slate-600 dark:text-gray-400 truncate">${verse}</div>
-                    `;
-                    div.onclick = () => {
-                        loadChapter(b, c);
-                        searchBarContainer.classList.add('hidden');
-                        searchResultsList.classList.add('hidden');
-                    };
-                    searchResultsList.appendChild(div);
-                }
-            }
-            if (count > maxResults) break;
-        }
-        if (count > maxResults) break;
-    }
-    
-    if (count === 0) {
-        searchResultsList.innerHTML = '<div class="p-4 text-center text-slate-500">Sin resultados.</div>';
+    if (isPlaying) {
+        // Restart to apply speed (Chrome quirk)
+        const progress = audioProgress.style.width; // rough save
+        window.speechSynthesis.cancel();
+        playAudio(); 
     }
 }
-
-// Init
-init();
