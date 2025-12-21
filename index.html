@@ -1,129 +1,374 @@
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es" class="dark">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <title>Santa Biblia Reina Valera 1960</title>
-    <!-- Use local font or system fallback -->
-    <link href="style.css" rel="stylesheet"/>
+    
+    <!-- Tailwind CSS (Solo para estilos base, tus estilos personalizados están abajo) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        'surface-dark': '#1e293b',
+                        'background-dark': '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- ================================================================== -->
+    <!--  SI USAS ARCHIVOS EXTERNOS: Descomenta la línea de abajo y borra el bloque <style> -->
+    <!--  <link href="style.css" rel="stylesheet"/> -->
+    <!-- ================================================================== -->
+
     <style>
-        /* Extra inline styles for things not covered in style.css or specific tweaks */
+        /* ================================================================== */
+        /* COPIAR ESTO EN TU ARCHIVO: style.css                              */
+        /* ================================================================== */
+        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Merriweather:wght@300;400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Corrección del ERROR DE CLICKS: El backdrop debe estar oculto por defecto */
+        #sidebar-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            opacity: 0;
+            pointer-events: none; /* ESTO ES CLAVE: permite clicks a través cuando es invisible */
+            transition: opacity 0.3s ease;
+        }
+
+        #sidebar-backdrop.show {
+            opacity: 1;
+            pointer-events: auto; /* Reactiva los clicks solo cuando es visible */
+        }
+
+        /* Sidebar transición */
+        #mobile-sidebar {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Estilos de lectura */
+        .verse-number {
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 0.75em;
+            vertical-align: super;
+            margin-right: 4px;
+            user-select: none;
+        }
+        
+        .verse-text {
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        /* Scrollbar oscura */
+        .dark ::-webkit-scrollbar { width: 8px; }
+        .dark ::-webkit-scrollbar-track { background: #0f172a; }
+        .dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body class="dark"> <!-- Default to dark mode as per snippet -->
+<body class="bg-gray-100 text-slate-800 dark:bg-background-dark dark:text-gray-100 h-screen flex flex-col overflow-hidden transition-colors duration-300">
     
-    <!-- Sidebar Overlay -->
-    <div id="sidebar-backdrop" class="sidebar-overlay"></div>
-    <aside id="mobile-sidebar" class="sidebar-content">
-        <div class="sidebar-header">
+    <!-- ================================================================== -->
+    <!--  ESTRUCTURA HTML (index.html)                                      -->
+    <!-- ================================================================== -->
+
+    <!-- Sidebar Overlay (Corregido) -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar()"></div>
+    
+    <!-- Sidebar -->
+    <aside id="mobile-sidebar" class="fixed inset-y-0 left-0 w-72 bg-white dark:bg-surface-dark z-50 transform -translate-x-full shadow-2xl flex flex-col border-r dark:border-slate-700">
+        <div class="p-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center bg-gray-50 dark:bg-slate-800">
             <h2 class="font-bold text-lg">Libros</h2>
-            <button id="close-sidebar">
-                <svg class="icon" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            <button onclick="toggleSidebar()" class="p-1 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-full">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
             </button>
         </div>
-        <div id="mobile-book-list" class="book-list">
-            <!-- Populated by JS -->
+        <div id="book-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+            <!-- Lista inyectada por JS -->
         </div>
     </aside>
 
-    <!-- Sticky Header -->
-    <header>
-        <div class="flex items-center justify-between px-4 h-16 max-w-lg mx-auto">
-            <!-- Left: Menu -->
-            <button id="open-sidebar-btn" class="p-2 -ml-2 rounded-full hover-bg-white-10 transition-colors">
-                <svg class="icon text-slate-600 dark:text-gray-400" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    <!-- Header -->
+    <header class="bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-slate-700 h-16 shrink-0 z-30">
+        <div class="h-full max-w-3xl mx-auto px-4 flex items-center justify-between">
+            
+            <!-- Botón Menú -->
+            <button onclick="toggleSidebar()" class="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                <svg class="w-6 h-6 text-slate-600 dark:text-gray-300" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
             </button>
-            <!-- Center: Book Selector (Triggers Sidebar too) -->
-            <button id="header-book-select" class="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 dark:bg-surface-dark hover-bg-gray-200 dark:hover-bg-white-10 transition-all group">
-                <span id="current-book-name-btn" class="text-sm font-bold tracking-wide group-hover:text-primary transition-colors">Génesis</span>
-                <svg class="icon icon-sm text-primary" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-            </button>
-            <!-- Right: Actions -->
-            <div class="flex items-center gap-1">
-                <button id="search-btn" class="p-2 rounded-full hover-bg-gray-200 dark:hover-bg-white-10 transition-colors">
-                    <svg class="icon text-slate-600 dark:text-gray-400" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                </button>
-                <button id="theme-toggle" class="p-2 -mr-2 rounded-full hover-bg-gray-200 dark:hover-bg-white-10 transition-colors">
-                    <svg class="icon text-slate-600 dark:text-gray-400" viewBox="0 0 24 24"><path d="M20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6zm0-10c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4z"/></svg>
-                </button>
-            </div>
-        </div>
-        
-        <!-- Search Bar (Hidden by default) -->
-        <div id="search-bar-container" class="hidden border-t border-gray-200 dark:border-white-5 bg-background-light dark:bg-background-dark p-2">
-            <div class="max-w-lg mx-auto flex gap-2">
-                <input id="search-input" type="text" placeholder="Buscar..." class="w-full bg-gray-100 dark:bg-surface-dark px-4 py-2 rounded-lg text-sm dark:text-white border-none focus:ring-2 ring-primary outline-none">
-            </div>
-             <div id="search-results-list" class="max-w-lg mx-auto mt-2 max-h-60 overflow-y-auto hidden"></div>
-        </div>
-        
-        <!-- Quick Actions Bar (Visual only as per snippet, maybe wire up Font size later?) -->
-        <div class="w-full border-t border-gray-200 dark:border-white-5 bg-background-light dark:bg-background-dark">
-            <div class="max-w-lg mx-auto px-4 py-2 overflow-x-auto flex gap-2 no-scrollbar">
-                <select id="chapter-select" class="bg-primary-10 text-primary text-xs font-semibold px-3 py-1.5 rounded-lg border-none outline-none">
-                    <!-- Populated by JS -->
+
+            <!-- Selector Central -->
+            <div class="flex items-center gap-2 bg-gray-100 dark:bg-slate-900 px-3 py-1.5 rounded-full border border-transparent dark:border-slate-700">
+                <span id="header-book-name" class="text-sm font-bold text-primary truncate max-w-[100px]">Génesis</span>
+                <div class="w-px h-4 bg-gray-300 dark:bg-slate-600 mx-1"></div>
+                <select id="chapter-select" class="bg-transparent text-sm font-bold text-slate-700 dark:text-gray-200 outline-none cursor-pointer">
+                    <!-- Capítulos inyectados por JS -->
                 </select>
-                <button id="font-size-btn" class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover-bg-gray-100 dark:hover-bg-white-10 text-slate-600 dark:text-gray-400 text-xs font-medium whitespace-nowrap transition-colors">
-                    <svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M9 4v3h5v12h3V7h5V4H9zm-6 8h3v7h3v-7h3V9H3v3z"/></svg>
-                    Fuente
+            </div>
+
+            <!-- Acciones -->
+            <div class="flex items-center gap-1">
+                <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 text-slate-600 dark:text-gray-300 transition-colors">
+                    <svg id="moon-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>
+                    <svg id="sun-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z"/></svg>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="max-w-lg mx-auto px-6 py-6">
-        <!-- Chapter Title -->
-        <div class="mb-8 text-center">
-            <h1 id="chapter-title-display" class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-                Génesis
-            </h1>
-            <p id="chapter-subtitle" class="mt-2 text-sm text-slate-500 dark:text-gray-500 font-medium tracking-wide uppercase">
-                Capítulo 1
-            </p>
-        </div>
+    <!-- Área Principal -->
+    <main id="main-scroll" class="flex-1 overflow-y-auto relative scroll-smooth">
+        <div class="max-w-2xl mx-auto px-6 py-8 pb-32">
+            
+            <div class="text-center mb-8">
+                <h1 id="chapter-title" class="text-3xl font-serif font-bold text-slate-900 dark:text-white mb-2">Génesis</h1>
+                <p id="chapter-subtitle" class="text-sm font-bold text-primary uppercase tracking-widest">Capítulo 1</p>
+            </div>
 
-        <!-- Scripture Text -->
-        <article id="content-display" class="space-y-6 text-lg leading-relaxed text-slate-800 dark:text-gray-200">
-            <!-- Verses injected here -->
-        </article>
-        
-        <!-- Nav Buttons -->
-        <div class="flex justify-between mt-12 mb-24">
-            <button id="prev-chapter-btn" class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-surface-dark font-medium text-sm">Anterior</button>
-            <button id="next-chapter-btn" class="px-4 py-2 rounded-lg bg-primary text-background-dark font-bold text-sm">Siguiente</button>
+            <!-- Contenedor del Texto -->
+            <article id="content-display" class="font-serif text-lg text-slate-700 dark:text-slate-300 space-y-4">
+                <!-- Texto inyectado por JS -->
+            </article>
+
+            <!-- Botones Navegación Inferior -->
+            <div class="flex justify-between mt-12 pt-8 border-t border-gray-200 dark:border-slate-800">
+                <button id="prev-btn" onclick="prevChapter()" class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-800 text-sm font-bold hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors">Anterior</button>
+                <button id="next-btn" onclick="nextChapter()" class="px-4 py-2 rounded-lg bg-primary text-white text-sm font-bold hover:bg-blue-600 shadow-lg shadow-blue-500/30 transition-colors">Siguiente</button>
+            </div>
         </div>
     </main>
 
-    <!-- Floating Audio Player -->
-    <div class="audio-player-container">
-        <div class="player-card">
-            <!-- Play Button -->
-            <button id="play-pause-btn" class="play-btn flex-shrink-0">
-                <svg id="play-icon" class="icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                <svg id="pause-icon" class="icon hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </button>
-            
-            <!-- Track Info & Progress -->
-            <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                <div class="flex justify-between items-baseline">
-                    <h3 id="player-title" class="text-white text-sm font-bold truncate">Génesis Capítulo 1</h3>
-                    <span id="player-status" class="text-xs text-gray-400 font-mono">Audio</span>
-                </div>
-                <!-- Progress Bar -->
-                <div class="progress-container">
-                    <div id="audio-progress" class="progress-bar"></div>
-                </div>
+    <!-- Reproductor Audio Flotante -->
+    <div class="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 dark:bg-black/90 backdrop-blur text-white p-3 rounded-2xl shadow-2xl border border-white/10 z-40 flex items-center gap-4">
+        <button onclick="toggleAudio()" class="w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-blue-400 shrink-0">
+            <svg id="play-icon" class="w-5 h-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="pause-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        <div class="flex-1 min-w-0">
+            <h3 id="player-title" class="text-xs font-bold truncate">Génesis 1</h3>
+            <div class="w-full bg-white/20 h-1 rounded-full mt-1.5 overflow-hidden">
+                <div id="progress-bar" class="bg-primary h-full w-0 transition-all duration-300"></div>
             </div>
-            
-             <!-- Speed -->
-            <button id="speed-btn" class="p-2 text-gray-400 hover:text-white transition-colors">
-                <span id="speed-display" class="text-xs font-bold border border-current rounded px-1 py-0.5">1x</span>
-            </button>
         </div>
     </div>
 
-    <script src="bible_data.js"></script>
-    <script src="app.js"></script>
+    <!-- ================================================================== -->
+    <!--  SCRIPTS: En tu proyecto real, estas etiquetas src estarían activas -->
+    <!--  <script src="bible_data.js"></script> -->
+    <!--  <script src="app.js"></script> -->
+    <!-- ================================================================== -->
+
+    <script>
+        // ================================================================== 
+        //  COPIAR ESTO EN TU ARCHIVO: bible_data.js
+        // ================================================================== 
+        
+        // Simulo tus datos externos aquí. 
+        // Asegúrate de que tu archivo bible_data.js tenga esta estructura:
+        const bibleData = [
+            {
+                name: "Génesis",
+                chapters: [
+                    [
+                        "En el principio creó Dios los cielos y la tierra.",
+                        "Y la tierra estaba desordenada y vacía, y las tinieblas estaban sobre la faz del abismo...",
+                        "Y dijo Dios: Sea la luz; y fue la luz.",
+                        "Y vio Dios que la luz era buena; y separó Dios la luz de las tinieblas."
+                    ],
+                    [
+                        "Fueron, pues, acabados los cielos y la tierra, y todo el ejército de ellos.",
+                        "Y acabó Dios en el día séptimo la obra que hizo; y reposó el día séptimo de toda la obra que hizo."
+                    ]
+                ]
+            },
+            {
+                name: "Éxodo",
+                chapters: [
+                    ["Estos son los nombres de los hijos de Israel que entraron en Egipto con Jacob..."]
+                ]
+            }
+        ];
+    </script>
+
+    <script>
+        // ================================================================== 
+        //  COPIAR ESTO EN TU ARCHIVO: app.js
+        // ================================================================== 
+
+        let currentBook = 0;
+        let currentChapter = 0;
+        let isPlaying = false;
+        let audioInterval;
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            renderBookList();
+            loadChapter(0, 0);
+            
+            // Listener para el selector de capítulos
+            document.getElementById('chapter-select').addEventListener('change', (e) => {
+                loadChapter(currentBook, parseInt(e.target.value));
+            });
+        });
+
+        function loadChapter(bookIndex, chapterIndex) {
+            // Validaciones
+            if(bookIndex >= bibleData.length || bookIndex < 0) return;
+            const book = bibleData[bookIndex];
+            if(chapterIndex >= book.chapters.length || chapterIndex < 0) return;
+
+            currentBook = bookIndex;
+            currentChapter = chapterIndex;
+
+            // UI Textos
+            document.getElementById('header-book-name').innerText = book.name;
+            document.getElementById('chapter-title').innerText = book.name;
+            document.getElementById('chapter-subtitle').innerText = `CAPÍTULO ${chapterIndex + 1}`;
+            document.getElementById('player-title').innerText = `${book.name} ${chapterIndex + 1}`;
+
+            // Renderizar Versículos
+            const display = document.getElementById('content-display');
+            let html = '';
+            book.chapters[chapterIndex].forEach((verse, i) => {
+                html += `
+                    <div class="verse-wrapper hover:bg-black/5 dark:hover:bg-white/5 p-1 rounded transition-colors cursor-pointer">
+                        <span class="verse-number">${i + 1}</span>
+                        <span class="verse-text">${verse}</span>
+                    </div>`;
+            });
+            display.innerHTML = html;
+
+            // Actualizar Selector
+            const select = document.getElementById('chapter-select');
+            select.innerHTML = '';
+            book.chapters.forEach((_, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.text = `Cap ${i + 1}`;
+                opt.selected = i === currentChapter;
+                select.appendChild(opt);
+            });
+
+            // Scroll arriba
+            document.getElementById('main-scroll').scrollTop = 0;
+            
+            // Actualizar lista de libros activa
+            renderBookList();
+        }
+
+        function renderBookList() {
+            const list = document.getElementById('book-list');
+            list.innerHTML = '';
+            bibleData.forEach((book, i) => {
+                const btn = document.createElement('button');
+                const isActive = i === currentBook;
+                btn.className = `w-full text-left px-4 py-3 text-sm font-medium transition-colors flex items-center justify-between
+                    ${isActive ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-slate-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-800'}`;
+                btn.innerHTML = `<span>${book.name}</span> ${isActive ? '<div class="w-2 h-2 bg-blue-500 rounded-full"></div>' : ''}`;
+                btn.onclick = () => {
+                    loadChapter(i, 0);
+                    toggleSidebar();
+                };
+                list.appendChild(btn);
+            });
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('mobile-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+            
+            // Aquí arreglamos el problema del click
+            if (sidebar.classList.contains('-translate-x-full')) {
+                // ABRIR
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.add('show');
+            } else {
+                // CERRAR
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.remove('show');
+            }
+        }
+
+        function nextChapter() {
+            const book = bibleData[currentBook];
+            if (currentChapter < book.chapters.length - 1) {
+                loadChapter(currentBook, currentChapter + 1);
+            } else if (currentBook < bibleData.length - 1) {
+                loadChapter(currentBook + 1, 0);
+            }
+        }
+
+        function prevChapter() {
+            if (currentChapter > 0) {
+                loadChapter(currentBook, currentChapter - 1);
+            } else if (currentBook > 0) {
+                const prevBook = bibleData[currentBook - 1];
+                loadChapter(currentBook - 1, prevBook.chapters.length - 1);
+            }
+        }
+
+        // Simulación de Audio
+        function toggleAudio() {
+            isPlaying = !isPlaying;
+            document.getElementById('play-icon').classList.toggle('hidden');
+            document.getElementById('pause-icon').classList.toggle('hidden');
+            
+            if(isPlaying) {
+                let w = 0;
+                audioInterval = setInterval(() => {
+                    w++; if(w>100) w=0;
+                    document.getElementById('progress-bar').style.width = w+'%';
+                }, 100);
+            } else {
+                clearInterval(audioInterval);
+            }
+        }
+
+        // Modo Oscuro
+        function initTheme() {
+            if (localStorage.theme === 'light') {
+                document.documentElement.classList.remove('dark');
+                toggleIcons(false);
+            } else {
+                document.documentElement.classList.add('dark');
+                toggleIcons(true);
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.theme = isDark ? 'dark' : 'light';
+            toggleIcons(isDark);
+        }
+
+        function toggleIcons(isDark) {
+            if(isDark) {
+                document.getElementById('moon-icon').classList.add('hidden');
+                document.getElementById('sun-icon').classList.remove('hidden');
+            } else {
+                document.getElementById('moon-icon').classList.remove('hidden');
+                document.getElementById('sun-icon').classList.add('hidden');
+            }
+        }
+    </script>
 </body>
 </html>
+
+
