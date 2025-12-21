@@ -1,65 +1,77 @@
 // State
 let currentBookIndex = 0;
 let currentChapterIndex = 0;
+let isPlaying = false;
+let speechUtterance = null;
+let currentSpeed = 1.0;
 
 // DOM Elements
-const bookListEl = document.getElementById('book-list');
-const mobileBookListEl = document.getElementById('mobile-book-list');
 const contentDisplayEl = document.getElementById('content-display');
-const currentBookNameEl = document.getElementById('current-book-name');
-const currentChapterDisplayEl = document.getElementById('current-chapter-display');
+const chapterTitleDisplayEl = document.getElementById('chapter-title-display');
+const chapterSubtitleEl = document.getElementById('chapter-subtitle');
 const chapterSelectEl = document.getElementById('chapter-select');
-const searchInputEl = document.getElementById('search-input');
-const searchInputMobileEl = document.getElementById('search-input-mobile');
-const searchResultsEl = document.getElementById('search-results');
-const searchResultsListEl = document.getElementById('search-results-list');
-const closeSearchBtn = document.getElementById('close-search');
-const prevChapterBtn = document.getElementById('prev-chapter');
-const nextChapterBtn = document.getElementById('next-chapter');
-const mobileSearchBtn = document.getElementById('mobile-search-btn');
-const mobileSearchBar = document.getElementById('mobile-search-bar');
+const prevChapterBtn = document.getElementById('prev-chapter-btn');
+const nextChapterBtn = document.getElementById('next-chapter-btn');
 
-// Sidebar logic
-const openSidebarBtn = document.getElementById('open-sidebar');
+// Header & Navigation
+const headerBookSelectBtn = document.getElementById('header-book-select');
+const currentBookNameBtnText = document.getElementById('current-book-name-btn');
+const openSidebarBtn = document.getElementById('open-sidebar-btn');
 const closeSidebarBtn = document.getElementById('close-sidebar');
 const mobileSidebar = document.getElementById('mobile-sidebar');
 const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+const mobileBookListEl = document.getElementById('mobile-book-list');
 
-function toggleSidebar() {
-    mobileSidebar.classList.toggle('-translate-x-full');
-    sidebarBackdrop.classList.toggle('hidden');
-}
+// Search
+const searchBtn = document.getElementById('search-btn');
+const searchBarContainer = document.getElementById('search-bar-container');
+const searchInput = document.getElementById('search-input');
+const searchResultsList = document.getElementById('search-results-list');
 
-openSidebarBtn.addEventListener('click', toggleSidebar);
-closeSidebarBtn.addEventListener('click', toggleSidebar);
-sidebarBackdrop.addEventListener('click', toggleSidebar);
+// Theme
+const themeToggleBtn = document.getElementById('theme-toggle');
 
-// Mobile Search Toggle
-mobileSearchBtn.addEventListener('click', () => {
-    mobileSearchBar.classList.toggle('hidden');
-    if (!mobileSearchBar.classList.contains('hidden')) {
-        searchInputMobileEl.focus();
-    }
-});
+// Audio
+const playPauseBtn = document.getElementById('play-pause-btn');
+const playIcon = document.getElementById('play-icon');
+const pauseIcon = document.getElementById('pause-icon');
+const playerTitle = document.getElementById('player-title');
+const playerStatus = document.getElementById('player-status');
+const audioProgress = document.getElementById('audio-progress');
+const speedBtn = document.getElementById('speed-btn');
+const speedDisplay = document.getElementById('speed-display');
 
+// Font Size
+const fontSizeBtn = document.getElementById('font-size-btn');
+let currentFontSize = 18; // px
 
 // Initialization
 function init() {
-    renderBookList(bookListEl);
-    renderBookList(mobileBookListEl);
+    renderBookList();
+    
+    // Load saved state if any (optional, skip for now)
     loadChapter(currentBookIndex, currentChapterIndex);
+    
     setupEventListeners();
+    
+    // Theme init
+    if (localStorage.getItem('theme') === 'light') {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
+    }
 }
 
-// Render Book List
-function renderBookList(container) {
-    container.innerHTML = '';
+// Sidebar Logic
+function toggleSidebar() {
+    mobileSidebar.classList.toggle('open');
+    sidebarBackdrop.classList.toggle('open');
+}
+
+// Render Book List in Sidebar
+function renderBookList() {
+    mobileBookListEl.innerHTML = '';
     
-    // Group by Testament
-    const testaments = {
-        'Antiguo': [],
-        'Nuevo': []
-    };
+    const testaments = { 'Antiguo': [], 'Nuevo': [] };
     
     bibleData.forEach((book, index) => {
         if (testaments[book.testament]) {
@@ -70,226 +82,325 @@ function renderBookList(container) {
     for (const [testament, books] of Object.entries(testaments)) {
         if (books.length === 0) continue;
 
-        const testamentHeader = document.createElement('div');
-        testamentHeader.className = 'px-4 py-2 bg-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider sticky top-0';
-        testamentHeader.textContent = `${testament} Testamento`;
-        container.appendChild(testamentHeader);
+        const header = document.createElement('div');
+        header.className = 'px-4 py-2 bg-gray-100 dark:bg-surface-dark text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider sticky top-0';
+        header.textContent = `${testament} Testamento`;
+        mobileBookListEl.appendChild(header);
 
         books.forEach(book => {
-            const bookBtn = document.createElement('button');
-            bookBtn.className = 'w-full text-left px-4 py-3 hover:bg-gray-50 text-sm border-b border-gray-100 transition-colors flex justify-between items-center group';
-            if (book.index === currentBookIndex) {
-                bookBtn.classList.add('active-book');
-            }
+            const item = document.createElement('div');
+            item.className = 'book-item';
+            if (book.index === currentBookIndex) item.classList.add('active');
             
-            bookBtn.innerHTML = `
-                <span class="font-medium ${book.index === currentBookIndex ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}">${book.name}</span>
-                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">${book.chapters.length} cap.</span>
+            item.innerHTML = `
+                <span class="font-medium text-sm">${book.name}</span>
+                <span class="text-xs text-slate-500 dark:text-gray-400 bg-gray-100 dark:bg-white-10 px-2 py-0.5 rounded-full">${book.chapters.length}</span>
             `;
             
-            bookBtn.onclick = () => {
-                currentBookIndex = book.index;
-                currentChapterIndex = 0;
-                loadChapter(currentBookIndex, currentChapterIndex);
-                // Update active state in both lists
-                updateActiveBook();
-                // Close mobile sidebar if open
-                if (!mobileSidebar.classList.contains('-translate-x-full')) {
-                    toggleSidebar();
-                }
+            item.onclick = () => {
+                loadChapter(book.index, 0);
+                toggleSidebar();
+                updateActiveBookInList();
             };
-            bookBtn.dataset.index = book.index; // For easy updating
-            container.appendChild(bookBtn);
+            item.dataset.index = book.index;
+            mobileBookListEl.appendChild(item);
         });
     }
 }
 
-function updateActiveBook() {
-    [bookListEl, mobileBookListEl].forEach(container => {
-        const buttons = container.querySelectorAll('button');
-        buttons.forEach(btn => {
-            if (parseInt(btn.dataset.index) === currentBookIndex) {
-                btn.classList.add('active-book');
-                const span = btn.querySelector('span.font-medium');
-                if(span) span.className = 'font-medium text-blue-700';
-            } else {
-                btn.classList.remove('active-book');
-                const span = btn.querySelector('span.font-medium');
-                if(span) span.className = 'font-medium text-gray-700 group-hover:text-blue-600';
-            }
-        });
+function updateActiveBookInList() {
+    const items = mobileBookListEl.querySelectorAll('.book-item');
+    items.forEach(item => {
+        if (parseInt(item.dataset.index) === currentBookIndex) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
     });
 }
 
-// Load Chapter Content
+// Core: Load Chapter
 function loadChapter(bookIndex, chapterIndex) {
     const book = bibleData[bookIndex];
     if (!book) return;
-    
-    // Ensure chapter index is valid
+
+    // Validate
     if (chapterIndex < 0) chapterIndex = 0;
     if (chapterIndex >= book.chapters.length) chapterIndex = book.chapters.length - 1;
-    
+
     currentBookIndex = bookIndex;
     currentChapterIndex = chapterIndex;
-    
-    // Update Header
-    currentBookNameEl.textContent = book.name;
-    currentChapterDisplayEl.textContent = `Capítulo ${currentChapterIndex + 1}`;
-    
-    // Update Select
+
+    // Stop audio if playing
+    stopAudio();
+
+    // Update UI Texts
+    chapterTitleDisplayEl.textContent = book.name;
+    chapterSubtitleEl.textContent = `Capítulo ${currentChapterIndex + 1}`;
+    currentBookNameBtnText.textContent = `${book.name} ${currentChapterIndex + 1}`;
+    playerTitle.textContent = `${book.name} ${currentChapterIndex + 1}`;
+    playerStatus.textContent = 'Audio';
+
+    // Populate Select
     populateChapterSelect(book);
     chapterSelectEl.value = currentChapterIndex;
-    
-    // Render Verses
+
+    // Render Text
     const verses = book.chapters[chapterIndex];
     contentDisplayEl.innerHTML = '';
     
-    if (!verses || verses.length === 0) {
-        contentDisplayEl.innerHTML = '<div class="text-center text-gray-500 italic py-10">Texto no disponible para este capítulo en la versión demo.</div>';
-    } else {
-        verses.forEach((text, i) => {
-            const verseContainer = document.createElement('div');
-            verseContainer.className = 'verse-container mb-3 px-2 py-1 rounded transition-colors cursor-text';
-            
-            const verseNum = document.createElement('span');
-            verseNum.className = 'verse-number';
-            verseNum.textContent = i + 1;
-            
-            const verseText = document.createElement('span');
-            verseText.className = 'verse-text text-gray-800';
-            verseText.textContent = text;
-            
-            verseContainer.appendChild(verseNum);
-            verseContainer.appendChild(verseText);
-            contentDisplayEl.appendChild(verseContainer);
-        });
-    }
-    
-    // Update Navigation Buttons
-    updateNavButtons();
-    
     // Scroll to top
-    document.getElementById('reading-area').scrollTop = 0;
+    window.scrollTo(0, 0);
+
+    if (!verses || verses.length === 0) {
+        contentDisplayEl.innerHTML = '<p class="text-center italic opacity-50">Texto no disponible.</p>';
+        return;
+    }
+
+    verses.forEach((text, i) => {
+        const p = document.createElement('p');
+        // Check for "Jesus words" logic if we had metadata, but we don't.
+        // Just standard rendering.
+        
+        // Verse Number
+        const vNum = document.createElement('span');
+        vNum.className = 'verse-num';
+        vNum.textContent = i + 1;
+        
+        p.appendChild(vNum);
+        p.appendChild(document.createTextNode(text));
+        contentDisplayEl.appendChild(p);
+    });
+    
+    // Nav Buttons
+    updateNavButtons();
 }
 
 function populateChapterSelect(book) {
     chapterSelectEl.innerHTML = '';
     book.chapters.forEach((_, i) => {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = `Capítulo ${i + 1}`;
-        chapterSelectEl.appendChild(option);
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = `Cap. ${i + 1}`;
+        chapterSelectEl.appendChild(opt);
     });
 }
 
 function updateNavButtons() {
     const book = bibleData[currentBookIndex];
+    prevChapterBtn.disabled = (currentBookIndex === 0 && currentChapterIndex === 0);
+    prevChapterBtn.style.opacity = prevChapterBtn.disabled ? '0.5' : '1';
     
-    // Prev Logic
-    if (currentChapterIndex === 0 && currentBookIndex === 0) {
-        prevChapterBtn.disabled = true;
+    const isLast = (currentBookIndex === bibleData.length - 1 && currentChapterIndex === book.chapters.length - 1);
+    nextChapterBtn.disabled = isLast;
+    nextChapterBtn.style.opacity = isLast ? '0.5' : '1';
+}
+
+// Audio Logic (TTS)
+function togglePlay() {
+    if (isPlaying) {
+        pauseAudio();
     } else {
-        prevChapterBtn.disabled = false;
-    }
-    
-    // Next Logic
-    if (currentBookIndex === bibleData.length - 1 && currentChapterIndex === book.chapters.length - 1) {
-        nextChapterBtn.disabled = true;
-    } else {
-        nextChapterBtn.disabled = false;
+        playAudio();
     }
 }
 
-// Navigation Events
-function setupEventListeners() {
-    chapterSelectEl.addEventListener('change', (e) => {
-        loadChapter(currentBookIndex, parseInt(e.target.value));
-    });
+function playAudio() {
+    if (window.speechSynthesis.paused && speechUtterance) {
+        window.speechSynthesis.resume();
+        isPlaying = true;
+        updatePlayerUI();
+        return;
+    }
+
+    if (window.speechSynthesis.speaking) {
+        // Already speaking something else? Stop it.
+        window.speechSynthesis.cancel();
+    }
+
+    const book = bibleData[currentBookIndex];
+    const verses = book.chapters[currentChapterIndex];
+    // Construct text
+    const fullText = `${book.name}, Capítulo ${currentChapterIndex + 1}. ` + verses.join('. ');
+
+    speechUtterance = new SpeechSynthesisUtterance(fullText);
+    speechUtterance.lang = 'es-ES'; // Spanish
+    speechUtterance.rate = currentSpeed;
     
+    // Progress estimation
+    const totalLength = fullText.length;
+    
+    speechUtterance.onboundary = (event) => {
+        if (event.name === 'word' || event.name === 'sentence') {
+            const percentage = (event.charIndex / totalLength) * 100;
+            audioProgress.style.width = `${percentage}%`;
+        }
+    };
+    
+    speechUtterance.onend = () => {
+        stopAudio();
+    };
+    
+    speechUtterance.onerror = (e) => {
+        console.error('Speech error:', e);
+        stopAudio();
+    };
+
+    window.speechSynthesis.speak(speechUtterance);
+    isPlaying = true;
+    updatePlayerUI();
+}
+
+function pauseAudio() {
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.pause();
+        isPlaying = false;
+        updatePlayerUI();
+    }
+}
+
+function stopAudio() {
+    window.speechSynthesis.cancel();
+    isPlaying = false;
+    speechUtterance = null;
+    audioProgress.style.width = '0%';
+    updatePlayerUI();
+}
+
+function updatePlayerUI() {
+    if (isPlaying) {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+        playerStatus.textContent = 'Reproduciendo...';
+        playerStatus.className = 'text-xs text-primary font-mono';
+    } else {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        playerStatus.textContent = 'Pausado / Audio';
+        playerStatus.className = 'text-xs text-gray-400 font-mono';
+    }
+}
+
+// Event Listeners Setup
+function setupEventListeners() {
+    // Nav
     prevChapterBtn.addEventListener('click', () => {
         if (currentChapterIndex > 0) {
             loadChapter(currentBookIndex, currentChapterIndex - 1);
         } else if (currentBookIndex > 0) {
             const prevBook = bibleData[currentBookIndex - 1];
             loadChapter(currentBookIndex - 1, prevBook.chapters.length - 1);
-            updateActiveBook();
         }
     });
     
     nextChapterBtn.addEventListener('click', () => {
-        const currentBook = bibleData[currentBookIndex];
-        if (currentChapterIndex < currentBook.chapters.length - 1) {
+        const book = bibleData[currentBookIndex];
+        if (currentChapterIndex < book.chapters.length - 1) {
             loadChapter(currentBookIndex, currentChapterIndex + 1);
         } else if (currentBookIndex < bibleData.length - 1) {
             loadChapter(currentBookIndex + 1, 0);
-            updateActiveBook();
         }
     });
-
+    
+    // Selects
+    chapterSelectEl.addEventListener('change', (e) => {
+        loadChapter(currentBookIndex, parseInt(e.target.value));
+    });
+    
+    // Sidebar
+    openSidebarBtn.addEventListener('click', toggleSidebar);
+    headerBookSelectBtn.addEventListener('click', toggleSidebar);
+    closeSidebarBtn.addEventListener('click', toggleSidebar);
+    sidebarBackdrop.addEventListener('click', toggleSidebar);
+    
     // Search
-    const performSearch = (query) => {
-        if (!query || query.trim().length < 2) return;
-        query = query.toLowerCase();
-        
-        searchResultsListEl.innerHTML = '';
-        let count = 0;
-        
-        bibleData.forEach((book, bIndex) => {
-            book.chapters.forEach((chapter, cIndex) => {
-                chapter.forEach((verse, vIndex) => {
-                    if (verse.toLowerCase().includes(query)) {
-                        count++;
-                        const resultItem = document.createElement('div');
-                        resultItem.className = 'p-4 border rounded-lg hover:shadow-md cursor-pointer transition-shadow bg-gray-50 hover:bg-white';
-                        resultItem.onclick = () => {
-                            loadChapter(bIndex, cIndex);
-                            updateActiveBook();
-                            searchResultsEl.classList.add('hidden');
-                            // Optional: Highlight logic could go here
-                        };
-                        
-                        const ref = document.createElement('div');
-                        ref.className = 'text-sm font-bold text-blue-600 mb-1';
-                        ref.textContent = `${book.name} ${cIndex + 1}:${vIndex + 1}`;
-                        
-                        const text = document.createElement('div');
-                        text.className = 'text-gray-700 text-sm';
-                        // Simple highlight
-                        const regex = new RegExp(`(${query})`, 'gi');
-                        text.innerHTML = verse.replace(regex, '<mark class="bg-yellow-200 text-gray-900 rounded px-0.5">$1</mark>');
-                        
-                        resultItem.appendChild(ref);
-                        resultItem.appendChild(text);
-                        searchResultsListEl.appendChild(resultItem);
-                    }
-                });
-            });
-        });
-        
-        if (count === 0) {
-            searchResultsListEl.innerHTML = '<div class="text-center text-gray-500 py-8">No se encontraron resultados.</div>';
-        }
-        
-        searchResultsEl.classList.remove('hidden');
-    };
-
-    searchInputEl.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') {
-            performSearch(e.target.value);
+    searchBtn.addEventListener('click', () => {
+        searchBarContainer.classList.toggle('hidden');
+        if (!searchBarContainer.classList.contains('hidden')) {
+            searchInput.focus();
         }
     });
     
-    searchInputMobileEl.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') {
-            performSearch(e.target.value);
-        }
+    searchInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') performSearch(e.target.value);
     });
     
-    closeSearchBtn.addEventListener('click', () => {
-        searchResultsEl.classList.add('hidden');
+    // Theme
+    themeToggleBtn.addEventListener('click', () => {
+        document.body.classList.toggle('dark');
+        document.documentElement.classList.toggle('dark');
+        const isDark = document.body.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    });
+    
+    // Font Size
+    fontSizeBtn.addEventListener('click', () => {
+        currentFontSize += 2;
+        if (currentFontSize > 24) currentFontSize = 14;
+        contentDisplayEl.style.fontSize = `${currentFontSize}px`;
+    });
+    
+    // Audio
+    playPauseBtn.addEventListener('click', togglePlay);
+    
+    speedBtn.addEventListener('click', () => {
+        const speeds = [1.0, 1.25, 1.5, 2.0, 0.75];
+        let idx = speeds.indexOf(currentSpeed);
+        idx = (idx + 1) % speeds.length;
+        currentSpeed = speeds[idx];
+        speedDisplay.textContent = `${currentSpeed}x`;
+        
+        // If playing, restart with new speed
+        if (isPlaying) {
+            window.speechSynthesis.cancel();
+            playAudio();
+        }
     });
 }
 
-// Start
+function performSearch(query) {
+    if (!query || query.length < 2) return;
+    query = query.toLowerCase();
+    
+    searchResultsList.innerHTML = '';
+    searchResultsList.classList.remove('hidden');
+    
+    let count = 0;
+    const maxResults = 50;
+    
+    for (let b = 0; b < bibleData.length; b++) {
+        const book = bibleData[b];
+        for (let c = 0; c < book.chapters.length; c++) {
+            const chapter = book.chapters[c];
+            for (let v = 0; v < chapter.length; v++) {
+                const verse = chapter[v];
+                if (verse.toLowerCase().includes(query)) {
+                    count++;
+                    if (count > maxResults) break;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'p-3 border-b border-gray-200 dark:border-white-10 cursor-pointer hover-bg-gray-200 dark:hover-bg-white-10 text-sm';
+                    div.innerHTML = `
+                        <div class="font-bold text-primary">${book.name} ${c+1}:${v+1}</div>
+                        <div class="text-slate-600 dark:text-gray-400 truncate">${verse}</div>
+                    `;
+                    div.onclick = () => {
+                        loadChapter(b, c);
+                        searchBarContainer.classList.add('hidden');
+                        searchResultsList.classList.add('hidden');
+                    };
+                    searchResultsList.appendChild(div);
+                }
+            }
+            if (count > maxResults) break;
+        }
+        if (count > maxResults) break;
+    }
+    
+    if (count === 0) {
+        searchResultsList.innerHTML = '<div class="p-4 text-center text-slate-500">Sin resultados.</div>';
+    }
+}
+
+// Init
 init();
