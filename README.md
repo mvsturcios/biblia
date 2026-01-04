@@ -19,21 +19,25 @@ Esta es una aplicación web de la Biblia optimizada para lectura, con separació
 
 1.  Abra el archivo `index.html` en su navegador web.
 2.  Use la barra lateral para seleccionar un libro.
-3.  Use el selector superior o los botones inferiores para cambiar de capítulo.
+3.  Use el selector superior o los botones inferiores para cambiar de este.
 4.  Use la barra de búsqueda para encontrar palabras clave.
 
-## Cómo agregar más libros
+## Cómo cambiar idioma o más libros
 
 Edite el archivo `bible_data.js` y agregue objetos al array `bibleData` siguiendo este formato:
+antes si cambiaras el idioma debes crear un archivo llamado en_bible_data.js dependiendo extension de idioma spanish english.
 
 ```javascript
 {
-    name: "Nombre del Libro",
+    name: "Nombre Antiguo Libro",
     abbrev: "Abr",
     testament: "Antiguo" | "Nuevo",
     chapters: [
         [ "Versículo 1", "Versículo 2", ... ], // Capítulo 1
         [ "Versículo 1", ... ] // Capítulo 2
-    ]
-}
+
 ```
+Reescrito y diseñado por NeoPunto, conocido cómo Andrés Turcios.
+
+Este libro es totalmente gratuito y esta prohibida su venta.
+
