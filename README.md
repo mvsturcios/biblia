@@ -1,43 +1,56 @@
-# Biblia Reina Valera 1960 - Web App
+# 📖 Biblia Reina Valera 1960 - Web App
 
-Esta es una aplicación web de la Biblia optimizada para lectura, con separación clara de versículos y números, funcionalidad de búsqueda y navegación intuitiva.
+Esta es una aplicación web de la Biblia optimizada para la lectura, el estudio y la integración en proyectos digitales. Cuenta con una separación clara de versículos, numeración precisa, funcionalidad de búsqueda y una navegación intuitiva.
 
-## Características
+> **Propósito:** Pensado especialmente para el desarrollo de aplicaciones en iglesias, grupos de estudio y uso personal gratuito.
 
-*   **Lectura Optimizada**: Cada versículo está separado y numerado claramente.
-*   **Navegación**: Selección fácil de libros y capítulos. Separación por Antiguo y Nuevo Testamento.
-*   **Búsqueda**: Buscador integrado que filtra por versículos.
-*   **Diseño Responsivo**: Funciona en móviles y escritorio gracias a Tailwind CSS.
+## ✨ Características
 
-## Estructura del Proyecto
+* **Lectura Optimizada:** Cada versículo está separado visualmente y numerado para facilitar la lectura.
+* **Navegación Intuitiva:** Selección ágil de Libros y Capítulos, con clara distinción entre el Antiguo y Nuevo Testamento.
+* **Buscador Potente:** Herramienta integrada que permite filtrar resultados por versículos específicos o palabras clave.
+* **Diseño Responsivo:** Interfaz moderna construida con **Tailwind CSS**, adaptable a dispositivos móviles, tablets y escritorio.
 
-*   `index.html`: La estructura principal de la página.
-*   `app.js`: La lógica de la aplicación (navegación, renderizado, búsqueda).
-*   `bible_data.js`: Contiene los datos de la Biblia.
-    *   *Nota*: Si nos ayudana traducir el bible_data.js seria bueno asi tendriamos multi-idiomas agregariamos un selector de idioma.
-## Cómo usar
+## 📂 Estructura del Proyecto
 
-1.  Abra el archivo `index.html` en su navegador web.
-2.  Use la barra lateral para seleccionar un libro.
-3.  Use el selector superior o los botones inferiores para cambiar de este.
-4.  Use la barra de búsqueda para encontrar palabras clave.
+* `index.html`: Estructura semántica principal de la página.
+* `app.js`: Lógica de la aplicación (control de navegación, renderizado dinámico y motor de búsqueda).
+* `bible_data.js`: Base de datos en formato JSON que contiene los textos bíblicos.
 
-## Cómo cambiar idioma o más libros
+## 🚀 Cómo usar
 
-Edite el archivo `bible_data.js` y agregue objetos al array `bibleData` siguiendo este formato:
-antes si cambiaras el idioma debes crear un archivo llamado en_bible_data.js dependiendo extension de idioma spanish english.
+1.  **Descargar:** Clone o descargue este repositorio.
+2.  **Ejecutar:** Abra el archivo `index.html` en su navegador web favorito.
+3.  **Navegar:**
+    * Utilice la **barra lateral** para seleccionar un libro.
+    * Use el **selector superior** o los botones de "Siguiente/Anterior" para cambiar de capítulo.
+    * Utilice la **barra de búsqueda** para localizar versículos o temas específicos.
+
+## 🌐 Desarrollo y Multi-idioma
+
+Actualmente, el proyecto utiliza `bible_data.js` para el contenido en español.
+
+**¿Quieres colaborar?**
+Si deseas ayudarnos a traducir la aplicación o añadir nuevos idiomas, sugerimos la siguiente estructura de archivos (ej. `en_bible_data.js` para inglés):
+
+### Formato de Datos (JSON)
+Para agregar libros o modificar el contenido, edite el array `bibleData` siguiendo estrictamente este formato:
 
 ```javascript
 {
-    name: "Nombre Antiguo Libro",
-    abbrev: "Abr",
-    testament: "Antiguo" | "Nuevo",
+    name: "Nombre del Libro",      // Ej: "Génesis"
+    abbrev: "Abr",                 // Ej: "Gn"
+    testament: "Antiguo",          // Opciones: "Antiguo" | "Nuevo"
     chapters: [
-        [ "Versículo 1", "Versículo 2", ... ], // Capítulo 1
-        [ "Versículo 1", ... ] // Capítulo 2
-
-```
-Reescrito y diseñado por NeoPunto, conocido cómo Andrés Turcios.
-
-Este libro es totalmente gratuito y esta prohibida su venta.
-
+        // Capítulo 1
+        [
+            "Versículo 1: En el principio...",
+            "Versículo 2: Y la tierra estaba desordenada...",
+        ],
+        // Capítulo 2
+        [
+            "Versículo 1: Fueron, pues, acabados los cielos...",
+            "Versículo 2: Y acabó Dios...",
+        ]
+    ]
+}
