@@ -14,8 +14,7 @@ Esta es una aplicación web de la Biblia optimizada para lectura, con separació
 *   `index.html`: La estructura principal de la página.
 *   `app.js`: La lógica de la aplicación (navegación, renderizado, búsqueda).
 *   `bible_data.js`: Contiene los datos de la Biblia.
-    *   *Nota*: Actualmente contiene una muestra (Génesis, Éxodo, Salmos, Mateo, Juan). Para agregar la Biblia completa, se debe poblar este archivo manteniendo la estructura JSON.
-
+    *   *Nota*: Si nos ayudana traducir el bible_data.js seria bueno asi tendriamos multi-idiomas agregariamos un selector de idioma.
 ## Cómo usar
 
 1.  Abra el archivo `index.html` en su navegador web.
